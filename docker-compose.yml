@@ -17,6 +17,12 @@ services:
       - ./data:/workspace/data
       - ./outputs:/workspace/outputs
       - ./hf_cache:/workspace/hf_cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7860/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   app-cuda:
@@ -43,4 +49,40 @@ services:
     # For Docker Desktop with GPU support
     # Alternatively, use the top-level 'gpus' key if supported
     gpus: all
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7860/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  app-rocm:
+    build:
+      context: .
+      dockerfile: Dockerfile.rocm
+    image: llm-finetuner:rocm
+    container_name: llm-finetuner-rocm
+    ports:
+      - "7860:7860"
+    environment:
+      - PORT=7860
+      - OLLAMA_URL=http://host.docker.internal:11434
+    volumes:
+      - ./config.json:/workspace/config.json
+      - ./data:/workspace/data
+      - ./outputs:/workspace/outputs
+      - ./hf_cache:/workspace/hf_cache
+    # Linux hosts only; ensure these devices exist and user has permissions
+    devices:
+      - "/dev/kfd:/dev/kfd"
+      - "/dev/dri:/dev/dri"
+    group_add:
+      - video
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7860/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped

@@ -180,9 +180,11 @@ def _get_settings():
     }
 
 
-def _save_settings(hf_token, ollama_url):
+def _save_settings(hf_token, ollama_url, clear_token=False):
     update = {}
-    if hf_token is not None and str(hf_token).strip() != "":
+    if clear_token:
+        update["HUGGINGFACE_TOKEN"] = None
+    elif hf_token is not None and str(hf_token).strip() != "":
         update["HUGGINGFACE_TOKEN"] = str(hf_token).strip()
     if ollama_url is not None and str(ollama_url).strip() != "":
         update["OLLAMA_URL"] = str(ollama_url).strip()
@@ -205,6 +207,7 @@ def build_ui() -> gr.Blocks:
                 with gr.Row():
                     hf_token_in = gr.Textbox(label="Hugging Face Token", type="password", placeholder="hf_...", value="")
                     ollama_url_in = gr.Textbox(label="Ollama URL", value=settings.ollama_url)
+                clear_token_cb = gr.Checkbox(label="Clear saved token", value=False)
                 btn_save_settings = gr.Button("Save Settings")
                 settings_status = gr.Textbox(label="Status", interactive=False)
                 gr.Markdown("Current Settings (token not shown):")
@@ -329,7 +332,8 @@ def build_ui() -> gr.Blocks:
                 create_result = gr.JSON(label="Result")
 
         # Wiring
-        btn_save_settings.click(_save_settings, [hf_token_in, ollama_url_in], [settings_status])
+        btn_save_settings.click(_save_settings, [hf_token_in, ollama_url_in, clear_token_cb], [settings_status])
+        btn_save_settings.click(_get_settings, None, [settings_view])
         # Populate settings and device info on load
         demo.load(_get_settings, None, [settings_view])
         demo.load(_device_info, None, [device_view])
