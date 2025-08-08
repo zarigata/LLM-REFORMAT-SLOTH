@@ -14,13 +14,13 @@ A Python web GUI to:
 
 ## Prerequisites
 - Python 3.10+
-- (Recommended) NVIDIA GPU + CUDA for training.
+- (Recommended) NVIDIA GPU + CUDA for training, or AMD ROCm on Linux, or DirectML on Windows.
 - (Optional) Docker — recommended on Windows for GPU & bitsandbytes stability.
-- Hugging Face token for gated models (set `HUGGINGFACE_TOKEN`).
+- Hugging Face token for gated models (you can set it in the app Settings tab).
 - An Ollama server reachable at `http://localhost:11434` or custom URL.
 
 ## Environment
-Before setup, decide if you will use Docker or native Windows.
+Choose one way to run:
 
 ### Native Windows (PowerShell or cmd)
 ```powershell
@@ -41,31 +41,59 @@ python -m app.main
 ```
 
 Notes:
-- On Windows, `bitsandbytes` may be limited. If install fails, you can remove it from `requirements.txt` and run in 8-bit/16-bit modes supported by your setup, or prefer Docker.
-- Install PyTorch matching your CUDA as per https://pytorch.org/get-started/locally/
+- On Windows, `bitsandbytes` may be limited. If install fails, remove it from `requirements.txt` or use Docker.
+- Install PyTorch matching your CUDA via https://pytorch.org/get-started/locally/
+- Optional: for AMD/Intel on Windows, you can try `pip install torch-directml` and the app will detect DirectML.
 
-### Docker (optional)
-A Dockerfile is not yet provided. If you want it, ask and we will generate one that supports CUDA.
+### Docker (CPU)
+Build and run a CPU-only container:
+
+```bash
+docker compose build app-cpu
+docker compose up app-cpu
+```
+
+Mounts (created on first run): `./data`, `./outputs`, `./hf_cache`, and `./config.json`.
+
+### Docker (CUDA GPU)
+Requires NVIDIA GPU, drivers, and Docker GPU support enabled.
+
+```bash
+docker compose build app-cuda
+docker compose up app-cuda
+```
+
+The CUDA image pre-installs PyTorch with cu121 wheels, then installs app deps.
 
 ## Usage
 1. Open the app in your browser (default http://localhost:7860/).
-2. Use the Models/Datasets tabs to search.
-3. Download a model if needed (caches to `hf_cache/`).
-4. Fine-tune tab: set base model id (e.g., `unsloth/llama-3-8b-bnb-4bit`) and dataset (`yahma/alpaca-cleaned` or local path). Start training — a job id is returned; view status/logs.
-5. Ollama Export: build a minimal Modelfile (FROM + TEMPLATE) and send to your Ollama server via `/api/create`.
+2. Open the Settings tab:
+   - Enter your Hugging Face token (not displayed back; stored in `config.json`).
+   - Confirm/update the Ollama URL (default `http://localhost:11434`).
+   - Review Device Info (CUDA/ROCm/DirectML/CPU).
+3. Use the Models/Datasets tabs to search; download if needed (caches to `hf_cache/`).
+4. Fine-tune tab: set base model id (e.g., `unsloth/llama-3-8b-bnb-4bit`) and dataset (`yahma/alpaca-cleaned` or local path). Start training — a job id is returned; view status/logs in Jobs.
+5. Merge (LoRA→HF): merge adapter into base and save under `outputs/`.
+6. Inference: quick text generation using base or base+adapter.
+7. Ollama Export: build a minimal Modelfile (FROM + TEMPLATE) and send to your Ollama server via `/api/create`.
 
 ### Important about Ollama
-- Running fine-tuned LoRA in Ollama typically requires merging adapters and converting to GGUF. This app generates and sends a Modelfile; you may need to convert/prepare weights externally before the model runs in Ollama. We can add an automated merge-and-convert step if desired.
+- Running fine-tuned LoRA in Ollama typically requires merging adapters and converting to GGUF.
+- This app can merge LoRA; for GGUF conversion use llama.cpp tooling (can be added later).
 
 ## Configuration
-- `HUGGINGFACE_TOKEN` — for private/gated repos
-- `HF_HOME` — cache dir (default `./hf_cache`)
-- `DATA_DIR`, `OUTPUTS_DIR` — data and outputs (default `./data`, `./outputs`)
-- `OLLAMA_URL` — Ollama server URL (default `http://localhost:11434`)
+- Settings are persisted to `config.json` (HF token and Ollama URL). Env vars still override on startup:
+  - `HUGGINGFACE_TOKEN`, `OLLAMA_URL`, `HF_HOME`, `DATA_DIR`, `OUTPUTS_DIR`
+- Directories: `./hf_cache`, `./data`, `./outputs` are created if missing.
+
+## Device Detection
+- The app auto-detects: CUDA (NVIDIA), ROCm (AMD on Linux), DirectML (Windows), else CPU.
+- Training/inference attempt 4-bit when enabled; falls back automatically if unsupported.
 
 ## Limitations / Next steps
-- Optional Dockerfile + compose for reproducibility and GPU
+- Optional GGUF conversion automation for Ollama
 - Model card preview and file browser in UI
-- Merge LoRA and auto-convert to GGUF for Ollama
+- Queue persistence across restarts
+- Harden container images as needed
 - Inference/test playground tab
 - Queue persistence across restarts

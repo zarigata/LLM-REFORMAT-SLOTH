@@ -9,10 +9,11 @@ from . import hf_client
 from .jobs import create_job, get_job, list_jobs, run_in_thread
 from .finetune import FinetuneConfig, run_finetune
 from .ollama_client import create_model as ollama_create_model
-from .settings import settings
+from .settings import settings, apply_config
 from . import fs_utils
 from . import infer
 from .merge import MergeConfig, run_merge
+from .device import get_device_info
 
 
 def _search_models(query, limit, task, library, sort, direction):
@@ -156,25 +157,61 @@ def _list_jobs():
 
 def _create_ollama_model(ollama_url, model_name, from_base, template_text):
     if not model_name:
-        return {"error": "Model name is required"}
-    # Minimal Modelfile builder
-    parts: List[str] = []
-    if from_base:
-        parts.append(f"FROM {from_base}")
-    if template_text:
-        parts.append("TEMPLATE \n\n" + template_text)
-    modelfile = "\n\n".join(parts) + "\n"
+        return {"error": "Model name required"}
+    from_base = (from_base or "").strip()
+    modelfile = f"FROM {from_base or 'llama3'}\n"
+    if template_text and template_text.strip():
+        modelfile += f"TEMPLATE \"{template_text.strip()}\"\n"
     try:
-        resp = ollama_create_model(ollama_url or settings.ollama_url, model_name, modelfile)
-        return resp
+        res = ollama_create_model(str(ollama_url or settings.ollama_url), str(model_name), modelfile)
+        return res
     except Exception as e:
         return {"error": str(e)}
+
+
+def _get_settings():
+    # Do not echo token back blindly; indicate if set.
+    return {
+        "HUGGINGFACE_TOKEN_set": bool(settings.hf_token),
+        "OLLAMA_URL": settings.ollama_url,
+        "DATA_DIR": settings.data_dir,
+        "OUTPUTS_DIR": settings.outputs_dir,
+        "HF_HOME": settings.hf_cache_dir,
+    }
+
+
+def _save_settings(hf_token, ollama_url):
+    update = {}
+    if hf_token is not None and str(hf_token).strip() != "":
+        update["HUGGINGFACE_TOKEN"] = str(hf_token).strip()
+    if ollama_url is not None and str(ollama_url).strip() != "":
+        update["OLLAMA_URL"] = str(ollama_url).strip()
+    if not update:
+        return "Nothing to update"
+    apply_config(update)
+    return "Saved settings. Restart not required."
+
+
+def _device_info():
+    return get_device_info()
 
 
 def build_ui() -> gr.Blocks:
     with gr.Blocks(title="Unsloth LLM Fine-Tuner for Ollama", theme=gr.themes.Soft()) as demo:
         gr.Markdown("## Unsloth LLM Fine-Tuner — Hugging Face Browser and Ollama Export")
         with gr.Tabs():
+            with gr.Tab("Settings"):
+                gr.Markdown("Configure tokens, endpoints and view system device info.")
+                with gr.Row():
+                    hf_token_in = gr.Textbox(label="Hugging Face Token", type="password", placeholder="hf_...", value="")
+                    ollama_url_in = gr.Textbox(label="Ollama URL", value=settings.ollama_url)
+                btn_save_settings = gr.Button("Save Settings")
+                settings_status = gr.Textbox(label="Status", interactive=False)
+                gr.Markdown("Current Settings (token not shown):")
+                settings_view = gr.JSON(label="Settings")
+                gr.Markdown("Device Info:")
+                device_view = gr.JSON(label="Device")
+
             with gr.Tab("Models"):
                 with gr.Row():
                     query = gr.Textbox(label="Query", value="llama3")
@@ -292,6 +329,11 @@ def build_ui() -> gr.Blocks:
                 create_result = gr.JSON(label="Result")
 
         # Wiring
+        btn_save_settings.click(_save_settings, [hf_token_in, ollama_url_in], [settings_status])
+        # Populate settings and device info on load
+        demo.load(_get_settings, None, [settings_view])
+        demo.load(_device_info, None, [device_view])
+
         btn_search.click(_search_models, [query, limit, task, library, sort, direction], df_models)
         btn_dl.click(_download_model, [repo_id], [dl_status])
         btn_readme_m.click(_model_readme, [repo_id], [md_model_readme])

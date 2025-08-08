@@ -4,7 +4,8 @@ from typing import Optional
 from pydantic import BaseModel
 
 from .jobs import Job
-from .settings import settings
+from . import settings as app_settings
+from .device import get_device_info
 
 
 class FinetuneConfig(BaseModel):
@@ -60,6 +61,8 @@ def _load_dataset(job: Job, cfg: FinetuneConfig):
 def run_finetune(job: Job, cfg: FinetuneConfig) -> None:
     """Execute a LoRA/QLoRA fine-tune using Unsloth and TRL SFTTrainer."""
     job.log("Starting fine-tuning job")
+    dev = get_device_info()
+    job.log(f"Device backend: {dev.get('backend')} | GPUs: {dev.get('num_gpus')} | Names: {', '.join(dev.get('gpu_names') or [])}")
 
     # Lazy imports to allow UI to start even if heavy deps missing
     try:
@@ -72,18 +75,32 @@ def run_finetune(job: Job, cfg: FinetuneConfig) -> None:
 
     ds = _load_dataset(job, cfg)
 
-    output_dir = cfg.output_dir or os.path.join(settings.outputs_dir, "lora_" + cfg.base_model_id.replace("/", "__"))
+    output_dir = cfg.output_dir or os.path.join(app_settings.settings.outputs_dir, "lora_" + cfg.base_model_id.replace("/", "__"))
     os.makedirs(output_dir, exist_ok=True)
 
     job.log(f"Loading base model: {cfg.base_model_id}")
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=cfg.base_model_id,
-        max_seq_length=cfg.max_seq_length,
-        dtype=None,
-        load_in_4bit=bool(cfg.use_4bit),
-        device_map="auto",
-        token=None,  # uses HF token from cache if configured
-    )
+    try:
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=cfg.base_model_id,
+            max_seq_length=cfg.max_seq_length,
+            dtype=None,
+            load_in_4bit=bool(cfg.use_4bit),
+            device_map="auto",
+            token=app_settings.settings.hf_token,
+        )
+    except Exception as e:
+        if cfg.use_4bit:
+            job.log(f"4-bit load failed, retrying without 4-bit: {e}")
+            model, tokenizer = FastLanguageModel.from_pretrained(
+                model_name=cfg.base_model_id,
+                max_seq_length=cfg.max_seq_length,
+                dtype=None,
+                load_in_4bit=False,
+                device_map="auto",
+                token=app_settings.settings.hf_token,
+            )
+        else:
+            raise
 
     job.log("Applying LoRA adapters")
     model = FastLanguageModel.get_peft_model(

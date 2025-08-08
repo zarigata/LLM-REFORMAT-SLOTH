@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional
+from . import settings as app_settings
 
 
 def generate_text(
@@ -35,19 +36,21 @@ def generate_text(
             "load_in_4bit": True,
         })
 
+    token = app_settings.settings.hf_token
+
     try:
-        model = AutoModelForCausalLM.from_pretrained(base_model_id, **load_kwargs)
+        model = AutoModelForCausalLM.from_pretrained(base_model_id, token=token, **load_kwargs)
     except Exception as e:
         # Fallback without 4bit
         if use_4bit:
             try:
-                model = AutoModelForCausalLM.from_pretrained(base_model_id, device_map="auto", torch_dtype=dtype)
+                model = AutoModelForCausalLM.from_pretrained(base_model_id, token=token, device_map="auto", torch_dtype=dtype)
             except Exception as e2:
                 return f"Failed to load model: {e2} (original 4bit error: {e})"
         else:
             return f"Failed to load model: {e}"
 
-    tok = AutoTokenizer.from_pretrained(base_model_id, use_fast=True)
+    tok = AutoTokenizer.from_pretrained(base_model_id, use_fast=True, token=token)
 
     if adapter_dir:
         try:

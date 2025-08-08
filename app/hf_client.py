@@ -3,8 +3,7 @@ from typing import Any, Dict, List, Optional
 import os
 
 from huggingface_hub import HfApi, snapshot_download, ModelFilter, DatasetFilter, hf_hub_download
-
-from .settings import settings
+from . import settings as app_settings
 
 
 _api = HfApi()
@@ -78,6 +77,7 @@ def download_model(repo_id: str, local_dir: Optional[str] = None) -> str:
     """Download a model snapshot to local_dir. Returns path.
     Requires HF token for some repos.
     """
+    settings = app_settings.settings
     local_dir = local_dir or os.path.join(settings.hf_cache_dir, "models", repo_id.replace("/", "__"))
     os.makedirs(local_dir, exist_ok=True)
     snapshot_download(
@@ -107,6 +107,7 @@ def _readme_path_from_info(info) -> Optional[str]:
 def get_model_readme(repo_id: str) -> str:
     """Return README markdown for a model repo, or a message if not found."""
     try:
+        settings = app_settings.settings
         info = _api.model_info(repo_id, token=settings.hf_token)
         fn = _readme_path_from_info(info)
         path = hf_hub_download(repo_id=repo_id, filename=fn, repo_type="model", token=settings.hf_token)
@@ -119,6 +120,7 @@ def get_model_readme(repo_id: str) -> str:
 def get_dataset_readme(repo_id: str) -> str:
     """Return README markdown for a dataset repo, or a message if not found."""
     try:
+        settings = app_settings.settings
         info = _api.dataset_info(repo_id, token=settings.hf_token)
         fn = _readme_path_from_info(info)
         path = hf_hub_download(repo_id=repo_id, filename=fn, repo_type="dataset", token=settings.hf_token)

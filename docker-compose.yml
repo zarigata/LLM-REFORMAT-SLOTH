@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  app-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    image: llm-finetuner:cpu
+    container_name: llm-finetuner-cpu
+    ports:
+      - "7860:7860"
+    environment:
+      - PORT=7860
+      - OLLAMA_URL=http://host.docker.internal:11434
+    volumes:
+      - ./config.json:/workspace/config.json
+      - ./data:/workspace/data
+      - ./outputs:/workspace/outputs
+      - ./hf_cache:/workspace/hf_cache
+    restart: unless-stopped
+
+  app-cuda:
+    build:
+      context: .
+      dockerfile: Dockerfile.cuda
+    image: llm-finetuner:cuda
+    container_name: llm-finetuner-cuda
+    ports:
+      - "7860:7860"
+    environment:
+      - PORT=7860
+      - OLLAMA_URL=http://host.docker.internal:11434
+    volumes:
+      - ./config.json:/workspace/config.json
+      - ./data:/workspace/data
+      - ./outputs:/workspace/outputs
+      - ./hf_cache:/workspace/hf_cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    # For Docker Desktop with GPU support
+    # Alternatively, use the top-level 'gpus' key if supported
+    gpus: all
+    restart: unless-stopped
