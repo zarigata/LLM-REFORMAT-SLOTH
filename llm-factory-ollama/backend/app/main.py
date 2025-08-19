@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from .config import FineTuneRequest, ExportRequest, PublishRequest
 from .jobs import manager
 from .pipeline.finetune_lora import run_lora
+from .pipeline.rlhf import run_rlhf
+from .pipeline.dpo import run_dpo
 from .pipeline.quantization import quantize
 from .pipeline.resizer import resize
 from .pipeline.exporter import export_model
@@ -34,8 +36,15 @@ def start_finetune(req: FineTuneRequest):
         model_id = None
         if req.fine_tune_method == "lora":
             model_id = run_lora(job, req.model_dump())
+        elif req.fine_tune_method == "rlhf":
+            model_id = run_rlhf(job, req.model_dump())
+        elif req.fine_tune_method == "dpo":
+            model_id = run_dpo(job, req.model_dump())
+        elif req.fine_tune_method == "full_finetune":
+            job.log("Full finetune not implemented; using LoRA fallback")
+            model_id = run_lora(job, req.model_dump())
         else:
-            job.log(f"Method {req.fine_tune_method} not implemented; using LoRA fallback")
+            job.log(f"Unknown method {req.fine_tune_method}; using LoRA fallback")
             model_id = run_lora(job, req.model_dump())
         # optional transforms
         resize(job, os.path.join("models", model_id), req.resizer_settings)
@@ -133,7 +142,9 @@ def build_summary(model_id: str):
         "model_id": model_id,
         "export": export_path,
         "ollama": {"created": False, "name": None, "serve_url": "http://localhost:11434"},
+        "ollama_status": "unknown",
         "git_commit": {"sha": None, "push_url": None},
+        "git_diff_url": None,
         "changelog_summary": None,
         "artifacts_paths": [model_dir],
     }
