@@ -17,6 +17,8 @@ class Job:
         self.artifacts: Dict[str, str] = {}
         self.started_at = None
         self.finished_at = None
+        self.attempts = 0
+        self.max_retries = int(payload.get("max_retries", 1))  # number of retries on failure
 
     def log(self, msg: str):
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -36,17 +38,29 @@ class JobManager:
         self.jobs[job.id] = job
 
         def runner():
-            try:
-                job.status = "running"
-                job.started_at = time.time()
-                target(job)
-                job.status = "done"
-            except Exception as e:
-                job.error = str(e)
-                job.status = "error"
-                job.log(f"Error: {e}")
-            finally:
-                job.finished_at = time.time()
+            backoff = 1.0
+            while True:
+                try:
+                    job.attempts += 1
+                    job.status = "running"
+                    if job.started_at is None:
+                        job.started_at = time.time()
+                    job.log(f"Attempt {job.attempts} of {job.max_retries + 1}")
+                    target(job)
+                    job.status = "done"
+                    break
+                except Exception as e:
+                    job.error = str(e)
+                    job.status = "error"
+                    job.log(f"Error: {e}")
+                    if job.attempts <= job.max_retries:
+                        job.log(f"Retrying in {backoff:.1f}s...")
+                        time.sleep(backoff)
+                        backoff *= 2
+                        continue
+                    break
+                finally:
+                    job.finished_at = time.time()
 
         t = threading.Thread(target=runner, daemon=True)
         t.start()
