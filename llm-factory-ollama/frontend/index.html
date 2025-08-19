@@ -10,6 +10,7 @@
   <header>
     <h1>LLM Factory → Ollama</h1>
     <p id="gpu"></p>
+    <button id="diagnoseBtn" aria-label="Diagnose GPU and environment">Diagnose</button>
   </header>
   <main>
     <section aria-labelledby="wizard">
@@ -57,6 +58,11 @@
         <button id="publishBtn">Publish to Ollama</button>
       </div>
       <pre id="summary"></pre>
+    </section>
+
+    <section aria-labelledby="diagnostics">
+      <h2 id="diagnostics">Diagnostics</h2>
+      <pre id="diagnosticsOut" aria-live="polite"></pre>
     </section>
   </main>
   <script src="/main.js" defer></script>

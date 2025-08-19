@@ -120,6 +120,11 @@ def metrics_gpu():
     return gpu_utils.detect_gpu()
 
 
+@app.get("/api/metrics/diagnose")
+def metrics_diagnose():
+    return gpu_utils.diagnose_gpu()
+
+
 @app.get("/api/artifact/{model_id}/{fname}")
 def download_artifact(model_id: str, fname: str):
     path = os.path.join("models", model_id, fname)

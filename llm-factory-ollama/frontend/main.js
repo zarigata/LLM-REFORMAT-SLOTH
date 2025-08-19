@@ -2,6 +2,7 @@ const $ = (s) => document.querySelector(s);
 const logs = $("#logs");
 const summary = $("#summary");
 const actions = $("#actions");
+const diagOut = $("#diagnosticsOut");
 let currentJob = null;
 let currentModelId = null;
 
@@ -58,3 +59,13 @@ $('#publishBtn').addEventListener('click', async () => {
 });
 
 fetchGPU();
+
+$('#diagnoseBtn').addEventListener('click', async () => {
+  try {
+    const r = await fetch('/api/metrics/diagnose');
+    const j = await r.json();
+    diagOut.textContent = JSON.stringify(j, null, 2);
+  } catch (e) {
+    diagOut.textContent = String(e);
+  }
+});
