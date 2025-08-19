@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM Factory → Ollama</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>LLM Factory → Ollama</h1>
+    <p id="gpu"></p>
+  </header>
+  <main>
+    <section aria-labelledby="wizard">
+      <h2 id="wizard">Wizard</h2>
+      <form id="form">
+        <label>Base Model Source
+          <select name="base_model_source">
+            <option value="huggingface">Hugging Face</option>
+            <option value="local_path">Local Path</option>
+            <option value="github_release">GitHub Release</option>
+            <option value="url">URL</option>
+          </select>
+        </label>
+        <label>Target GPU
+          <select name="target_gpu">
+            <option value="cpu">CPU</option>
+            <option value="nvidia">NVIDIA</option>
+            <option value="amd">AMD</option>
+          </select>
+        </label>
+        <label>Fine-tune Method
+          <select name="fine_tune_method">
+            <option value="lora">LoRA (default)</option>
+            <option value="full_finetune">Full Finetune</option>
+            <option value="rlhf">RLHF</option>
+            <option value="dpo">DPO</option>
+          </select>
+        </label>
+        <label>Export Format
+          <select name="export_format">
+            <option value="gguf">GGUF</option>
+            <option value="safetensors">safetensors</option>
+          </select>
+        </label>
+        <label><input type="checkbox" name="dry_run" checked> Dry-run (no downloads)</label>
+        <button type="submit">Fine-Tune</button>
+      </form>
+    </section>
+
+    <section aria-labelledby="progress">
+      <h2 id="progress">Progress</h2>
+      <pre id="logs" aria-live="polite"></pre>
+      <div id="actions" hidden>
+        <button id="exportBtn">Export</button>
+        <button id="publishBtn">Publish to Ollama</button>
+      </div>
+      <pre id="summary"></pre>
+    </section>
+  </main>
+  <script src="/main.js" defer></script>
+</body>
+</html>

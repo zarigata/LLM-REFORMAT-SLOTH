@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+
+# Node
+node_modules/
+
+# Models and artifacts
+models/**/*.gguf
+models/**/*.safetensors
+models/**/*.bin
+models/**/artifacts/
+models/**/logs/
+
+# VSCode
+.vscode/
+
+# Docker
+*.tar
+
+# Coverage / test
+.coverage
+htmlcov/
+pytest_cache/
+
+# Logs
+logs/
+
+# Frontend build
+frontend/dist/
+backend/public/

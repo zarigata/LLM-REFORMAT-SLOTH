@@ -1,0 +1,35 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: llm-factory-ollama:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../models:/app/models
+      - ../logs:/app/logs
+    environment:
+      - UVICORN_PORT=8000
+    # enable the next two lines for NVIDIA GPU, if desired
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    # For NVIDIA GPU inside Docker Desktop on Windows/Linux:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+volumes:
+  ollama:

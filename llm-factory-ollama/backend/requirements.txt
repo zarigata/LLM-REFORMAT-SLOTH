@@ -1,0 +1,15 @@
+fastapi>=0.112
+uvicorn[standard]>=0.30
+pydantic>=2.7
+python-multipart>=0.0.9
+# ML stack (kept minimal; full GPU variants documented in runbook)
+transformers>=4.42
+peft>=0.12
+datasets>=2.20
+accelerate>=0.33
+safetensors>=0.4
+sentencepiece>=0.2
+bandit>=1.7
+black>=24.4
+isort>=5.13
+pytest>=8.3
